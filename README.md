@@ -45,6 +45,30 @@ agent is the policy; a set of per-feature markdown state files is the harness.
 | Policy decides: search / retain / verify / stop | The agent's only jobs inside `/speckit.harness.explore` |
 | Recoverable search state | Resume any session from files via `/speckit.harness.status` |
 
+## What you gain
+
+One thing to be precise about up front: the harness does **not** make your
+agent's conversation context persist — nothing can, and every agent starts a
+new session empty. What it does is make the conversation **disposable**:
+everything worth keeping is written to files at the moment it is learned, and
+`/speckit.harness.status` re-renders the working picture into any new session
+in one step. State survives; context is rebuilt on demand.
+
+What that buys you, concretely:
+
+| With the harness | Without it — research state lives in the conversation |
+|---|---|
+| **Session immortality** — resume after a restart, compaction, window overflow, or crash with one `status` call | whatever fell out of the context window is gone for good |
+| **Token efficiency** — each step re-renders a bounded slice (default cap: 4,000 tokens), never the full history | continuing means re-reading an ever-growing transcript |
+| **No repeated searches** — the candidate pool dedups by source + topic; repeats are flagged `dup-of` | the same query gets re-run days later because nothing remembers it ever ran |
+| **Claims with verdicts** — every load-bearing claim carries `verified` / `refuted` / `unverifiable`, plus method and confidence | "I checked that somewhere" hardens into the plan unexamined |
+| **Remembered dead ends** — refuted claims stay on file, marked, never deleted | the same wrong conclusion gets re-derived in the next session |
+| **Bounded research** — explicit budgets and a marginal-gain stop rule decide when exploration ends | research ends when the agent drifts or the context fills up |
+| **Auditable, shareable evidence** — plain markdown: diffable, PR-reviewable, and a teammate (or their agent) can take over mid-research | the evidence behind a plan exists only inside one person's expired chat |
+
+The tutorial's [step 6](#6-speckitimplement--boxing-the-mid-build-unknown)
+shows the resume scene in action.
+
 ## Installation
 
 ```bash
