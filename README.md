@@ -88,6 +88,52 @@ files; no external tools, MCP servers, or network access required.
 State lives in `specs/<feature>/harness/` (or `.specify/harness/global/` when
 no feature directory exists).
 
+## Where it fits in the Spec Kit workflow
+
+The harness does not replace any core stage. It fills the **research gap
+between writing a spec and trusting a plan** — and it hands its results to the
+core flow through `research.md`, the exact artifact `/speckit.plan`'s
+*Phase 0: Outline & Research* generates and consumes.
+
+```text
+/speckit.constitution               project principles — no harness involvement
+        │
+/speckit.specify ──▶ spec.md
+        │  └─ hook after_specify → /speckit.harness.init      (optional prompt)
+        │
+        │  ┌─ RESEARCH PHASE (harness home turf) ──────────────────────┐
+        │  │  /speckit.harness.explore   budgeted evidence gathering   │
+        │  │  /speckit.harness.verify    check the spec's claims       │
+        │  │  /speckit.harness.report ─▶ research.md + coverage table  │
+        │  └────────────────────────────────────────────────────────────┘
+        │
+/speckit.plan ──▶ plan.md           Phase 0 starts from verified research.md
+        │                           instead of one-shot, unverified research
+        │  └─ hook after_plan → /speckit.harness.verify       (optional prompt)
+        │
+/speckit.tasks ──▶ tasks.md         gate: /speckit.harness.status shows no
+        │                           unverified critical claims before this
+/speckit.implement                  explore/status on demand for unknowns
+                                    discovered mid-implementation
+```
+
+Stage by stage:
+
+| Core stage | Harness command | How it is used |
+|---|---|---|
+| `/speckit.constitution` | — | Not used. |
+| Right after `/speckit.specify` | `init` (the `after_specify` hook offers it) | Creates the per-feature state files; the spec's open questions become the **mission** and get explicit budgets. |
+| **Between specify and plan** | `explore` → `verify` → `report` | The main pass: gather evidence within budget, adversarially verify the spec's load-bearing claims, then write `research.md` with a requirement-coverage table. This is the deep, resumable replacement for plan's ad-hoc Phase 0 research. |
+| Right after `/speckit.plan` | `verify` (the `after_plan` hook offers it) | Re-checks the *plan's* factual claims against primary sources. Refuted claims come back as suggested edits — apply them via `/speckit.clarify` or by hand before they harden into tasks. |
+| Before `/speckit.tasks` | `status` | Go/no-go gate: the snapshot warns if any `critical` claim is still unverified or contradicted. |
+| During `/speckit.implement` | `explore` / `status` as needed | Budget-boxed investigation of unknowns discovered mid-implementation; a fresh session resumes from files, not from a lost context window. |
+| Any time | `status` | Read-only snapshot + exactly one recommended next action; the session-resume entry point. |
+
+Two rules keep the integration safe: the harness **never edits**
+`spec.md`, `plan.md`, or `tasks.md` (corrections always flow back as suggested
+edits), and the only core artifact it writes is `research.md` — between
+`<!-- harness:begin/end -->` markers, preserving anything you wrote by hand.
+
 ## Usage
 
 ### 1. `/speckit.harness.init` — set up the harness
