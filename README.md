@@ -407,15 +407,21 @@ or archived, given the keyboard-undo flow?* Box it instead of guessing:
 → E007 (medium): FR-003's undo wording implies soft-delete · 2 actions spent
 ```
 
-Next morning, new session, zero context carried over:
+Next morning you open a **brand-new session**. The previous *conversation* is
+gone — that is true of every agent, with or without this extension. The
+difference: the harness never kept the research state in the conversation in
+the first place, so nothing of value was lost. One command re-renders the full
+working picture from the files:
 
 ```text
 /speckit.harness.status
 → mission answered · budgets healthy · Recommendation: finish T012, T013
 ```
 
-The files are the memory — at no point did this tutorial depend on a single
-context window staying alive.
+The files are the memory. A conversation context can die at any moment
+(session restart, compaction, window overflow); the harness state survives
+all of them, and `/speckit.harness.status` rebuilds your context from it in
+one step.
 
 ## State files
 
