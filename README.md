@@ -266,44 +266,156 @@ Statuses: `covered-verified` / `covered-unverified` / `contradicted` /
 `uncovered`. Contradictions and uncovered requirements come with suggested
 follow-ups (fix the artifact, explore more, or carry the risk explicitly).
 
-## Worked example — end to end
+## Tutorial — a simple todo app, end to end
 
-Researching a *session-revocation* feature:
+This walks **every core Spec Kit stage** and shows exactly where the harness
+is used in each one. The app: a minimal single-user web todo list — add,
+complete, delete; todos must survive a restart.
 
-```text
-/speckit.specify Build a session-revocation feature for the admin console
-   → specs/001-session-revocation/spec.md          (core Spec Kit)
-   → hook prompt: "Set up a state-externalized research harness?" → yes
+### 0. One-time setup
 
-/speckit.harness.init How is session state stored today, and what can invalidate it?
-   → specs/001-session-revocation/harness/{budget,candidates,curated,evidence,verification,observations}.md
-
-/speckit.harness.explore
-   → SEARCH "session" across src/ ............ 9 candidates (C001–C009)
-   → INSPECT C002 src/auth/session.ts ........ curated E001 (critical): "JWTs validated only at the gateway"
-   → INSPECT C005 src/cache/redis.ts ......... curated E002 (high): "session cache TTL 24h, no revocation list"
-   → SEARCH "revoke OR invalidate" ........... no new candidates (dup-of O-003)
-   → STOP: marginal gain exhausted
-   → budget: searches 27/30 left · inspections 37/40 left
-
-/speckit.harness.verify
-   → V001 "JWTs validated only at gateway" .... verified (high) — re-read gateway middleware
-   → V002 "no revocation list exists" ......... refuted — found legacy denylist in src/auth/legacy.ts
-   → curated E00x demoted to refuted; suggested spec edit reported
-
-/speckit.harness.status
-   → 1 refuted claim propagated, 0 critical unverified, budget healthy
-   → Recommendation: /speckit.harness.report
-
-/speckit.harness.report
-   → specs/001-session-revocation/research.md — coverage 4/5, FR-003 uncovered (flagged)
-
-/speckit.plan
-   → the plan now cites verified evidence and inherits one explicit known-unknown
+```bash
+specify init todo-app --integration claude     # or your agent
+cd todo-app
+specify extension add harness --from https://github.com/formin/spec-kit-harness/archive/refs/tags/v1.0.0.zip
 ```
 
-If the session dies anywhere in the middle: open a new one and run
-`/speckit.harness.status`. The files are the memory.
+### 1. `/speckit.constitution` — principles (no harness yet)
+
+```text
+/speckit.constitution Keep it simple: smallest stack that works, test-first,
+and no claim enters a plan without a checked source.
+```
+
+The harness is not involved at this stage — but that last principle is
+precisely what it operationalizes from stage 3 onward.
+
+### 2. `/speckit.specify` — spec, then harness init via the hook
+
+```text
+/speckit.specify Single-user web todo app: add, complete, delete; todos must
+survive an app restart; keyboard-friendly UI.
+```
+
+→ `specs/001-todo-app/spec.md` with FR-001..FR-005 and two open questions
+(persistence mechanism? UI stack?). The `after_specify` hook fires:
+
+```text
+Set up a state-externalized research harness for this feature? → yes
+
+/speckit.harness.init Which persistence option and minimal web stack satisfy
+the constitution? searches=15 inspections=20 verifications=8
+```
+
+→ `specs/001-todo-app/harness/` is created, and `budget.md` now reads:
+
+```markdown
+## Mission
+1. Which persistence option and minimal web stack satisfy the constitution?
+
+| Resource | Budget | Spent | Remaining |
+| searches | 15 | 0 | 15 |
+```
+
+### 3. Between specify and plan — explore → verify → report
+
+The harness's home turf: answer the spec's open questions *before* planning.
+
+```text
+/speckit.harness.explore
+```
+
+A few iterations, each externalized to the state files as it happens:
+
+```text
+SEARCH  "sqlite vs json file vs localStorage, single-user persistence"
+        → C001..C004 added to candidates.md
+INSPECT C002 better-sqlite3 docs
+        → curated E001 (high): "zero-config embedded DB; sync API fits a tiny app"
+INSPECT C004 MDN localStorage
+        → curated E002 (critical): "per-browser storage — todos would not survive
+          switching browsers; conflicts with FR-004 as written"
+SEARCH  "minimal node static file serving"   → dup-of O-002, nothing new
+STOP    marginal gain exhausted · budget left: searches 12, inspections 17
+```
+
+Now verify the spec's load-bearing assumptions before they harden:
+
+```text
+/speckit.harness.verify
+```
+
+```markdown
+| ID | Claim | Verdict | Confidence |
+| V001 | A SQLite file survives app restart (FR-004) | verified | high |
+| V002 | "Saving a JSON file is atomic" (spec note)  | refuted — partial-write risk; use write-then-rename | high |
+```
+
+The refuted claim comes back as a **suggested edit** — apply it via
+`/speckit.clarify` or by hand. Then bridge the results into the core flow:
+
+```text
+/speckit.harness.report
+```
+
+→ `specs/001-todo-app/research.md`:
+
+```markdown
+### Requirement Coverage — 5/5
+| Requirement | Status | Evidence | Verification |
+| FR-004 persist across restart | covered-verified | E001 | V001 (high) |
+```
+
+### 4. `/speckit.plan` — planning from verified research
+
+```text
+/speckit.plan SQLite via better-sqlite3, small Express server, vanilla JS frontend
+```
+
+Plan's *Phase 0: Outline & Research* finds `research.md` already populated
+with verified, cited findings instead of re-deriving everything in one shot.
+When the plan lands, the `after_plan` hook fires:
+
+```text
+Verify plan claims against primary sources? → yes
+
+/speckit.harness.verify plan.md
+→ V003 "express.static serves the frontend with zero config" — verified (high)
+```
+
+### 5. `/speckit.tasks` — gated by status
+
+```text
+/speckit.harness.status
+→ 0 unverified critical claims · 1 corrected assumption (V002) already applied
+→ Recommendation: proceed to /speckit.tasks
+
+/speckit.tasks
+```
+
+### 6. `/speckit.implement` — boxing the mid-build unknown
+
+```text
+/speckit.implement
+```
+
+Halfway through, a real unknown appears: *should completed todos be deleted
+or archived, given the keyboard-undo flow?* Box it instead of guessing:
+
+```text
+/speckit.harness.explore Does undo require archived todos, or is hard delete enough? searches=5 inspections=5
+→ E007 (medium): FR-003's undo wording implies soft-delete · 2 actions spent
+```
+
+Next morning, new session, zero context carried over:
+
+```text
+/speckit.harness.status
+→ mission answered · budgets healthy · Recommendation: finish T012, T013
+```
+
+The files are the memory — at no point did this tutorial depend on a single
+context window staying alive.
 
 ## State files
 
