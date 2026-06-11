@@ -71,15 +71,42 @@ shows the resume scene in action.
 
 ## Installation
 
+Research Harness is listed in the
+[Spec Kit community extension catalog](https://github.com/github/spec-kit/blob/main/extensions/catalog.community.json).
+
+**Option 1 — by name, from the community catalog.** Spec Kit treats the
+community catalog as discovery-only by default, so allow installs from it once
+(per project, or per user via `~/.specify/extension-catalogs.yml`):
+
+```yaml
+# .specify/extension-catalogs.yml
+catalogs:
+  - name: default
+    url: https://raw.githubusercontent.com/github/spec-kit/main/extensions/catalog.json
+    priority: 1
+    install_allowed: true
+  - name: community
+    url: https://raw.githubusercontent.com/github/spec-kit/main/extensions/catalog.community.json
+    priority: 2
+    install_allowed: true
+```
+
+```bash
+specify extension add harness
+```
+
+**Option 2 — zero config, pinned version.** Install straight from a release URL:
+
 ```bash
 specify extension add harness --from https://github.com/formin/spec-kit-harness/archive/refs/tags/v1.0.0.zip
 ```
 
-> The CLI shows an *Untrusted Source* warning for any URL install and asks
-> `Continue with installation? [y/N]` — answer `y`. (In a non-interactive
-> shell, pipe the answer: `echo y | specify extension add …`.)
+> URL installs show an *Untrusted Source* warning and ask
+> `Continue with installation? [y/N]` — answer `y` (in a non-interactive
+> shell, pipe it: `echo y | specify extension add …`). Catalog installs skip
+> this prompt.
 
-Or for development:
+**Option 3 — for development:**
 
 ```bash
 git clone https://github.com/formin/spec-kit-harness
@@ -324,7 +351,7 @@ complete, delete; todos must survive a restart.
 ```bash
 specify init todo-app --integration claude     # or your agent
 cd todo-app
-specify extension add harness --from https://github.com/formin/spec-kit-harness/archive/refs/tags/v1.0.0.zip
+specify extension add harness                  # see Installation for the one-time catalog opt-in
 ```
 
 ### 1. `/speckit.constitution` — principles (no harness yet)
