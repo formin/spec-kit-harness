@@ -124,11 +124,17 @@ core flow through `research.md`, the exact artifact `/speckit.plan`'s
         │
 /speckit.specify ──▶ spec.md
         │  └─ hook after_specify → /speckit.harness.init      (optional prompt)
+        │       └─ creates specs/<feature>/harness/{budget, candidates,
+        │          curated, evidence, verification, observations}.md
         │
         │  ┌─ RESEARCH PHASE (harness home turf) ──────────────────────┐
         │  │  /speckit.harness.explore   budgeted evidence gathering   │
+        │  │    ↳ appends: candidates · curated · evidence ·           │
+        │  │      observations · budget ledger (every iteration)       │
         │  │  /speckit.harness.verify    check the spec's claims       │
+        │  │    ↳ appends: verification records (+ evidence, ledger)   │
         │  │  /speckit.harness.report ─▶ research.md + coverage table  │
+        │  │    ↳ the only harness write to a core artifact            │
         │  └────────────────────────────────────────────────────────────┘
         │
 /speckit.plan ──▶ plan.md           Phase 0 starts from verified research.md
@@ -152,6 +158,23 @@ Stage by stage:
 | Before `/speckit.tasks` | `status` | Go/no-go gate: the snapshot warns if any `critical` claim is still unverified or contradicted. |
 | During `/speckit.implement` | `explore` / `status` as needed | Budget-boxed investigation of unknowns discovered mid-implementation; a fresh session resumes from files, not from a lost context window. |
 | Any time | `status` | Read-only snapshot + exactly one recommended next action; the session-resume entry point. |
+
+And when each harness file comes into existence, and who touches it afterward:
+
+| File | Created at | Written during | Consumed by |
+|---|---|---|---|
+| `budget.md` | `init` — mission, budgets, stop conditions | every `explore`/`verify` action (ledger + action log row) | every command |
+| `candidates.md` | `init` — empty pool | `explore`: one row per discovery, deduplicated | `explore`, `status` |
+| `curated.md` | `init` — empty set | `explore` (promotions, evictions); `verify` (demotes refuted entries) | every command, `report` |
+| `evidence.md` | `init` — empty | `explore` and `verify`: pointer entries | `verify`, `report` |
+| `verification.md` | `init` — empty | `verify`: one row per checked claim | `status` (gate), `report` |
+| `observations.md` | `init` — empty log | every `explore`/`verify` action: ≤3-line compressed entry | `explore`, `status` |
+| `research.md` | **`report`** — the last harness step before `/speckit.plan` | re-running `report` (only between the `harness:begin/end` markers) | `/speckit.plan` Phase 0 |
+
+All six state files exist from `init` onward — created once and never
+clobbered (`init` is idempotent). `status` writes nothing, ever. `research.md`
+is the one file born later, at `report` time — deliberately right before
+planning consumes it.
 
 Two rules keep the integration safe: the harness **never edits**
 `spec.md`, `plan.md`, or `tasks.md` (corrections always flow back as suggested
