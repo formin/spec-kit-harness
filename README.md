@@ -69,6 +69,85 @@ What that buys you, concretely:
 The tutorial's [step 6](#6-speckitimplement--boxing-the-mid-build-unknown)
 shows the resume scene in action.
 
+## Plain Spec Kit vs. Spec Kit + Research Harness
+
+First, the honest framing: **this is not an alternative to Spec Kit — it is an
+extension that plugs into it.** Spec Kit already does research — `/speckit.plan`
+opens with *Phase 0: Outline & Research*, which prompts the agent to fan out
+into parallel research tasks and write the result to `research.md`. The harness
+does not remove that step; it makes the same step **budgeted, verified, and
+resumable**. Everything below compares *the research phase of a plain Spec Kit
+workflow* against *that same phase with the harness installed* — the rest of
+Spec Kit (`constitution`, `specify`, `tasks`, `implement`) is untouched.
+
+| Research dimension | Plain Spec Kit (`/speckit.plan` Phase 0) | + Research Harness |
+|---|---|---|
+| Where the working state lives | Inside the planning agent's conversation context | Externalized to `specs/<feature>/harness/*.md` |
+| After the session ends | Gone on restart, compaction, or window overflow | Survives in files; `/speckit.harness.status` rebuilds it in one step |
+| How far it explores | Unbounded prompt; stops when context fills or the agent drifts | Explicit budgets (searches / inspections / verifications) + a marginal-gain stop rule |
+| Repeated searches | Nothing remembers what was already queried | Candidate pool dedups by source + topic; repeats flagged `dup-of` |
+| Claim checking | Findings are written into `research.md` as the agent stated them | Adversarial pass *tries to refute* each load-bearing claim → `verified` / `refuted` / `unverifiable` + method + confidence |
+| Dead ends | Re-derived from scratch in the next session | Refuted claims kept on file, marked — never re-investigated blind |
+| Output | `research.md`, free-form | The same `research.md` — **plus a requirement-coverage table** (`covered-verified` … `uncovered`) |
+
+(Some rows echo [What you gain](#what-you-gain) — that section frames these as
+benefits in the abstract; here each one is pinned to the exact Spec Kit step it
+changes.)
+
+### The same question, two ways
+
+Say the spec hinges on one assumption: *can we ship `better-sqlite3`, and will
+it run on our deploy target?*
+
+**Plain Spec Kit** — Phase 0 researches inline and records the conclusion:
+
+```text
+research.md
+  Decision: use better-sqlite3 (fast, synchronous SQLite binding).
+```
+
+Plausible, and probably right — but nobody checked the part that actually bites
+(native compilation on the deploy image), the search trail evaporates when the
+session ends, and the next session starts over.
+
+**Spec Kit + Harness** — the same research, externalized and checked:
+
+```text
+/speckit.harness.explore
+  C001 better-sqlite3 README   C002 prebuild-install notes
+  → curated E001 (critical): "ships prebuilt binaries for common platforms;
+    falls back to compiling via node-gyp when none match"
+
+/speckit.harness.verify
+  V001 "no compiler needed on linux/x64 + glibc"  → verified  (high)
+  V002 "works as-is on Alpine/musl"               → refuted   (high)
+        → needs build-base to compile; suggested edit to spec.md
+
+/speckit.harness.report
+  research.md + coverage row:
+  FR-004 persistence → covered-verified (E001 / V001)
+```
+
+```text
+# next morning, brand-new session
+/speckit.harness.status
+  → mission answered · 1 refuted assumption on record (Alpine) · budgets healthy
+```
+
+Same decision — but now the load-bearing part carries a verdict, the Alpine
+dead end is **remembered** instead of re-hit during `/speckit.implement`, and
+the whole trail survives into a fresh session as plain, PR-reviewable markdown.
+
+### Bottom line
+
+The harness is a **rigor layer for the research phase**. For a throwaway
+script, plain Spec Kit's Phase 0 is fine. For anything where a wrong assumption
+hardens into a plan — an unfamiliar library, a load-bearing "there is no
+existing X", or research too long to fit one context window — the budget, the
+verification verdicts, and the resumable state are the difference between *a
+plausible sentence* and *a checked one*. See [Where it fits in the Spec Kit
+workflow](#where-it-fits-in-the-spec-kit-workflow) for which commands run where.
+
 ## Installation
 
 Research Harness is listed in the
