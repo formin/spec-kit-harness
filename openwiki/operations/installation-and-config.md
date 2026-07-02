@@ -52,8 +52,23 @@ Copy [`config-template.yml`](../../config-template.yml) to `.specify/extensions/
 
 ## OpenWiki documentation refresh (`.github/workflows/openwiki-update.yml`)
 
-The docs under `openwiki/` are refreshed by the `OpenWiki Update` GitHub Actions workflow:
+The docs under `openwiki/` are refreshed **daily at 08:00 KST by a local
+scheduled task on the maintainer's machine**, which runs
+`openwiki --update --print` against a local LM Studio server
+(`OPENWIKI_PROVIDER=openai`, `OPENAI_BASE_URL=http://127.0.0.1:1234/v1`) and
+pushes any `openwiki/` changes directly to `main` (`docs: update OpenWiki`).
+If the LM Studio server is not running, the task logs the fact and skips.
 
-- **Triggers**: `workflow_dispatch` (manual) and a daily schedule at `0 21 * * *` UTC (06:00 KST).
-- **Steps**: checks out the repository, sets up Node.js 22, installs OpenWiki globally (`npm install --global openwiki`), runs `openwiki --update --print` with `OPENWIKI_PROVIDER: anthropic` and `OPENWIKI_MODEL_ID: anthropic/claude-sonnet-5`, then opens a pull request (branch `openwiki/update`, paths limited to `openwiki/`) via `peter-evans/create-pull-request`.
-- **Requirement**: the repository secret `ANTHROPIC_API_KEY` must be set, or the OpenWiki step fails. The workflow has `contents: write` and `pull-requests: write` permissions so it can push the branch and open the PR.
+The `OpenWiki Update` GitHub Actions workflow remains as a **manual cloud
+fallback**:
+
+- **Trigger**: `workflow_dispatch` only (GitHub-hosted runners cannot reach
+  the local LM Studio endpoint).
+- **Steps**: checks out the repository, sets up Node.js 22, installs OpenWiki
+  globally, runs `openwiki --update --print` with `OPENWIKI_PROVIDER: anthropic`
+  and `OPENWIKI_MODEL_ID: anthropic/claude-sonnet-5`, then opens a pull request
+  (branch `openwiki/update`, paths limited to `openwiki/`) via
+  `peter-evans/create-pull-request`.
+- **Requirement**: the repository secret `ANTHROPIC_API_KEY` must be set, or
+  the OpenWiki step fails. The workflow has `contents: write` and
+  `pull-requests: write` permissions so it can push the branch and open the PR.

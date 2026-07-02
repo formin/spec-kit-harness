@@ -1,10 +1,11 @@
 name: OpenWiki Update
 
+# Daily refreshes run locally at 08:00 KST against LM Studio
+# (http://127.0.0.1:1234), which GitHub-hosted runners cannot reach.
+# This workflow is a manual cloud fallback; it needs the
+# ANTHROPIC_API_KEY repository secret.
 on:
   workflow_dispatch:
-  schedule:
-    # GitHub schedules use UTC; 21:00 UTC is 06:00 KST.
-    - cron: "0 21 * * *"
 
 permissions:
   contents: write
