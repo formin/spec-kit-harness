@@ -1,0 +1,9 @@
+# Exclude repository-only files from release archives.
+# GitHub tag zips (archive/refs/tags/vX.Y.Z.zip) honor export-ignore, so
+# `specify extension add` consumers get only the extension payload.
+.gitattributes export-ignore
+.gitignore export-ignore
+.github/ export-ignore
+openwiki/ export-ignore
+AGENTS.md export-ignore
+CLAUDE.md export-ignore
